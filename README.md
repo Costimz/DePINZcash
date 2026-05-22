@@ -114,6 +114,111 @@ depinzcash-relay watch --interval-secs 300 \
 
 ---
 
+## Relay CLI setup
+
+These commands install the operator-side `depinzcash-relay` CLI from this repo and verify that it is available on your machine.
+
+### 1. Prerequisites
+
+- Rust / Cargo 1.70+ from [rustup.rs](https://rustup.rs/).
+- A synced Zebra node if you want live node metrics. The relay can read the tip from Zebra JSON-RPC with `--node-rpc`.
+- `~/.cargo/bin` on your `PATH` so installed Cargo binaries are easy to run:
+
+```bash
+export PATH="$HOME/.cargo/bin:$PATH"
+```
+
+Add that line to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.) if needed.
+
+### 2. Clone and install
+
+```bash
+git clone https://github.com/ZcashDePIN/DePINZcash.git
+cd DePINZcash/prover
+cargo install --path . --bin depinzcash-relay
+```
+
+The binary is installed at:
+
+```bash
+$HOME/.cargo/bin/depinzcash-relay
+```
+
+### 3. Verify the CLI
+
+```bash
+depinzcash-relay --version
+depinzcash-relay --help
+depinzcash-relay register --help
+depinzcash-relay watch --help
+```
+
+A successful local setup should print version/help output for the `keygen`, `register`, `submit`, and `watch` commands.
+
+### 4. Create an operator keypair
+
+Run this from the repo root (or another operator working directory):
+
+```bash
+mkdir -p config
+depinzcash-relay keygen --out config/solana-keypair.json
+```
+
+Keep `config/solana-keypair.json` private. It is the signing key used to register your node and sign proof submissions.
+
+### 5. Register your node
+
+For the live API:
+
+```bash
+depinzcash-relay register \
+  --api https://api.zcashdepin.com \
+  --keypair config/solana-keypair.json \
+  --kind zebra-full \
+  --label primary \
+  --state config/relay-state.json
+```
+
+For a local server, replace `--api` with `http://127.0.0.1:3000`.
+
+### 6. Submit or watch proofs
+
+Recommended for continuous operation against a Zebra JSON-RPC endpoint:
+
+```bash
+depinzcash-relay watch \
+  --api https://api.zcashdepin.com \
+  --keypair config/solana-keypair.json \
+  --state config/relay-state.json \
+  --node-rpc http://127.0.0.1:8232 \
+  --interval-secs 300
+```
+
+For a one-off manual test submission, provide an explicit height and block hash:
+
+```bash
+depinzcash-relay submit \
+  --api https://api.zcashdepin.com \
+  --keypair config/solana-keypair.json \
+  --state config/relay-state.json \
+  --height <zcash-height> \
+  --block-hash <block-hash> \
+  --uptime-seconds 7200 \
+  --peers 12
+```
+
+You can also submit a generated proof file:
+
+```bash
+depinzcash-relay submit \
+  --api https://api.zcashdepin.com \
+  --keypair config/solana-keypair.json \
+  --state config/relay-state.json \
+  --proof-file proofs/latest.json
+```
+
+---
+
 ## Verification model
 
 **Permissive mode (dev/early):** if `TRUSTED_RPCS` is empty, the server accepts proofs without cross-checking and tags them `permissive-mode:no-trusted-rpcs`. Useful before you have RPC endpoints lined up.
